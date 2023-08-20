@@ -9,9 +9,6 @@ autocmd! BufReadCmd jdt://*
 autocmd! BufReadCmd *.class
 autocmd BufReadCmd,FileReadCmd,SourceCmd jdt://* lua require('jc.jdtls').read_class_content(vim.fn.expand("<amatch>"))
 
-command! JCdebugAttach lua require('jc.vimspector').debug_attach()
-command! JCdebugLaunch lua require('jc.vimspector').debug_launch()
-command! JCdebugWithConfig lua require('jc.vimspector').debug_choose_configuration()
 command! JCimportsOrganizeSmart lua require('jc.jdtls').organize_imports(true)
 command! JCimportsOrganize lua require('jc.jdtls').organize_imports(false)
 command! JCgenerateToString lua require('jc.jdtls').generate_toString()
@@ -30,10 +27,6 @@ if luaeval("pcall(require, 'jdtls')")
   command! JCrefactorExtractVar lua require('jdtls').extract_variable()
   command! -range=% JCrefactorExtractMethod lua require('jdtls').extract_method(true)
 
-  command! JCutilUpdateConfig lua require('jdtls').update_project_config()
-  command! JCutilJol lua require('jdtls').jol()
-  command! JCutilBytecode lua require('jdtls').javap()
-  command! JCutilJshell lua require('jdtls').jshell()
 else
   echom "Install nvim-jdtls to have additional commands"
 endif

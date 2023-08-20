@@ -86,20 +86,27 @@ local function download_jdtls()
 end
 
 local function resolve_jdtls()
-  local ok, servers = pcall(require, "nvim-lsp-installer.servers")
-  assert(ok, "nvim-lsp-installer is not installed")
-
-  if servers.is_server_installed("jdtls") then
-    local jdtls_path = servers.get_server_install_path("jdtls")
+  local jdtls_path ="~/.local/share/nvim/mason/packages/jdtls" 
     return {
       jar = vim.fn.expand(jdtls_path .. "/plugins/org.eclipse.equinox.launcher_*.jar"),
       config = vim.fn.expand(jdtls_path .. "/config_" .. vim.g["utils#OS"]),
       lombok = vim.fn.expand(jdtls_path .. "/lombok.jar"),
     }
-  else
-    vim.defer_fn(download_jdtls, 1)
-    return false
-  end
+
+  -- local ok, servers = pcall(require, "nvim-lsp-installer.servers")
+  -- assert(ok, "nvim-lsp-installer is not installed")
+
+  -- if servers.is_server_installed("jdtls") then
+  --   local jdtls_path = servers.get_server_install_path("jdtls")
+  --   return {
+  --     jar = vim.fn.expand(jdtls_path .. "/plugins/org.eclipse.equinox.launcher_*.jar"),
+  --     config = vim.fn.expand(jdtls_path .. "/config_" .. vim.g["utils#OS"]),
+  --     lombok = vim.fn.expand(jdtls_path .. "/lombok.jar"),
+  --   }
+  -- else
+  --   vim.defer_fn(download_jdtls, 1)
+  --   return false
+  -- end
 end
 
 local function resolve_java_debug()
@@ -189,17 +196,34 @@ local function lspconfig_setup(paths)
     "-data", paths.workspace_dir,
   }
 
-  local bundles = {
-    paths.java_debug,
-  }
+  -- local bundles = {
+  --   paths.java_debug,
+  -- }
 
-  require("lspconfig").jdtls.setup({
+    local HOME = os.getenv "HOME"
+    local DEBUGGER_LOCATION = HOME .. "/.local/share/nvim"
+
+    -- Debugging
+    local bundles = {
+        vim.fn.glob(
+          DEBUGGER_LOCATION .. "/java-debug/com.microsoft.java.debug.plugin/target/com.microsoft.java.debug.plugin-*.jar"
+        ),
+      }
+    vim.list_extend(bundles, vim.split(vim.fn.glob(DEBUGGER_LOCATION .. "/vscode-java-test/server/*.jar"), "\n"))
+
+    local on_attach_func = function(client,bufnr)
+        require("jdtls").setup_dap {hotcodereplace = "auto"}
+        require("jdtls").setup.add_commands()
+        require("jdtls.dap").setup_dap_main_class_configs()
+        M.config.jc_on_attach()
+    end
+
+
+ require("jdtls").start_or_attach({
     name = "jdtls",
-    root_dir = function()
-      return vim.fn.getcwd()
-    end,
-    on_attach = M.config.jc_on_attach,
-    cmd = cmd,
+    root_dir =vim.fs.dirname(vim.fs.find({'.git','mvnw','gradlew'},{upward=true})[1]),
+    on_attach = on_attach_func,
+    cmd = {DEBUGGER_LOCATION .. '/mason/bin/jdtls'},
     settings = settings,
     init_options = {
       bundles = bundles,
@@ -216,10 +240,9 @@ local function lspconfig_setup(paths)
         overrideMethodsPromptSupport = true,
         inferSelectionSupport = { "extractMethod", "extractVariable", "extractConstant" },
       },
-      workspace = path.get_project_dirs().workspace_dir,
+      -- workspace = path.get_project_dirs().workspace_dir,
     },
   })
-  require("lspconfig.configs")["jdtls"].launch()
 end
 
 function M.jdtls_setup(config)
